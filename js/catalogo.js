@@ -597,8 +597,8 @@
       // velocidade do fim do gesto, em px por ms (zero se o dedo parou antes de soltar)
       const am = a.am, n = am.length, agora = performance.now();
       const veloc = (n >= 2 && agora - am[n - 1][0] < 120) ? (am[n - 1][1] - am[0][1]) / Math.max(1, am[n - 1][0] - am[0][0]) : 0;
-      if (Math.abs(veloc) > 0.3 && Math.abs(a.bruto) > 18) dir = veloc < 0 ? 1 : -1;      // peteleco
-      else if (Math.abs(a.bruto) > a.w * 0.22) dir = a.bruto < 0 ? 1 : -1;                // arrasto longo
+      if (Math.abs(veloc) > 0.25 && Math.abs(a.bruto) > 14) dir = veloc < 0 ? 1 : -1;     // peteleco
+      else if (Math.abs(a.bruto) > a.w * 0.15) dir = a.bruto < 0 ? 1 : -1;                // arrasto de 15% da largura ja vira
       // so vale se for a folha que o dedo esta segurando
       if ((dir === 1 && a.alvo !== atual) || (dir === -1 && a.alvo !== atual - 1)) dir = 0;
     }
