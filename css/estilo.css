@@ -353,22 +353,34 @@ h1, h2, h3, p { margin: 0; }
 
 /* ---------- celular: pagina em pe, conteudo reorganizado, rola por dentro ---------- */
 html.cel .topo { padding: 0 16px; font-size: 11px; letter-spacing: 0.18em; }
-/* no celular nao ha 3D: as paginas ficam lado a lado e deslizam acompanhando o dedo.
-   --pos (-1, 0 ou 1) vem do script em cada folha; --dx e o quanto o dedo arrastou, posto no .livro. */
+/* no celular a folha vira como papel, girando pela borda esquerda e acompanhando o dedo.
+   O 3D so existe enquanto a folha vira (classe .girando) ou depois de virada (data-v="1", ja invisivel):
+   a pagina parada na tela fica sem transform nenhum, que e o que deixa o dedo rolar por dentro dela.
+   --ang (angulo) e --t (0 a 1, quanto escurece) vem do script em cada folha. */
 html.cel .mesa { background: var(--mesa); perspective: none; }
 html.cel .livro { transform-style: flat; }
 html.cel .livro-sombra { display: none; }
 html.cel .folha {
   transform-style: flat;
-  transform: translate3d(calc(var(--pos, 1) * (100% + 14px) + var(--dx, 0px)), 0, 0);
-  transition: transform 0.42s cubic-bezier(0.22, 0.8, 0.24, 1);
+  transform-origin: 0 50%;
+  transform: none;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transition: transform 0.6s cubic-bezier(0.33, 0.1, 0.3, 1), filter 0.6s ease;
 }
+html.cel .folha.girando,
+html.cel .folha[data-v="1"] {
+  transform: perspective(calc(var(--pw) * 4.2)) rotateY(var(--ang, 0deg));
+  filter: brightness(calc(1 - var(--t, 0) * 0.36));
+}
+html.cel .folha.girando { box-shadow: 16px 0 38px rgba(0, 0, 0, 0.42); }
 html.cel .livro.arrastando .folha { transition: none; }
 html.cel .lado { backface-visibility: visible; -webkit-backface-visibility: visible; }
 html.cel .lado.verso { display: none; }
 html.cel .folha.virando .frente::after { display: none; }
 html.cel .mini { width: 42px; height: 28px; }
-html.cel .pg { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+/* touch-action precisa estar na propria pagina que rola: o navegador zera a regra da mesa em quem tem rolagem,
+   e sem isso o celular de verdade toma o gesto de lado e a folha nao vira */
+html.cel .pg { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 html.cel .pg::-webkit-scrollbar { display: none; }
 
 /* look book */

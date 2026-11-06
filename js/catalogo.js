@@ -166,10 +166,10 @@
 
   function construir() {
     const cel = dimensionar();
+    arr = null;
+    livro.classList.remove('arrastando');
     if (cel === celular && folhas.length) { ir(atual, true); return; }
     celular = cel;
-    livro.classList.remove('arrastando');
-    livro.style.removeProperty('--dx');
     livro.innerHTML = '<div class="livro-sombra" aria-hidden="true"></div>';
     folhas = paginas.map(pg => {
       const f = document.createElement('div');
@@ -224,24 +224,46 @@
     f.style.zIndex = virada ? (j + 1) : (2 * N - j);
   }
 
-  // celular: sem 3D. Cada folha recebe --pos (-1 a esquerda, 0 na tela, 1 a direita) e o CSS desliza.
-  // So a pagina atual e as vizinhas ficam visiveis; a que esta saindo continua visivel ate o deslize acabar.
-  let limpaOcultas = null;
+  // celular: a folha vira em 3D pela borda esquerda, mas so enquanto vira (classe .girando).
+  // Parada, so a pagina atual fica visivel e sem transform, que e o que deixa o dedo rolar por dentro dela.
+  // Em cada folha: data-v (1 = ja virada), --ang (angulo) e --t (quanto escurece).
+  const ANG_VIRADA = -104;
+  let assenta = null;
+  function estadoFolha(f, virada, animar) {
+    if (!animar) f.style.transition = 'none';
+    f.dataset.v = virada ? '1' : '0';
+    f.style.setProperty('--ang', virada ? ANG_VIRADA + 'deg' : '0deg');
+    f.style.setProperty('--t', virada ? '1' : '0');
+    if (!animar) { void f.offsetWidth; f.style.transition = ''; }
+  }
+  function assentar() {
+    clearTimeout(assenta);
+    folhas.forEach((f, j) => {
+      // tira o 3D de uma vez, sem transicao: a pagina parada tem de ficar sem transform ja
+      const girava = f.classList.contains('girando');
+      if (girava) f.style.transition = 'none';
+      f.classList.remove('girando');
+      f.style.zIndex = j < atual ? 0 : N - j;
+      f.classList.toggle('oculta', j !== atual);
+      if (girava) { void f.offsetWidth; f.style.transition = ''; }
+    });
+  }
   function irCelular(s, imediato) {
     const anterior = atual;
     atual = s;
     const parado = imediato || reduzido;
+    clearTimeout(assenta);
+    // so uma folha vira a vista: a que sai (indo para a frente) ou a que volta (indo para tras)
+    const principal = s > anterior ? anterior : s < anterior ? s : -1;
     folhas.forEach((f, j) => {
       f.classList.remove('virada', 'virando');
-      f.style.zIndex = '';
       f.style.transitionDelay = '';
-      if (Math.abs(j - s) <= 1 || j === anterior) f.classList.remove('oculta');
-      if (parado) f.style.transition = 'none';
-      f.style.setProperty('--pos', j < s ? -1 : j > s ? 1 : 0);
-      if (parado) { void f.offsetWidth; f.style.transition = ''; }
+      const anima = !parado && (j === principal || f.classList.contains('girando'));
+      if (anima) { f.classList.add('girando'); f.classList.remove('oculta'); f.style.zIndex = 3 * N - j; }
+      else if (j === s) f.classList.remove('oculta');
+      estadoFolha(f, j < s, anima);
     });
-    clearTimeout(limpaOcultas);
-    limpaOcultas = setTimeout(() => folhas.forEach((f, j) => f.classList.toggle('oculta', Math.abs(j - atual) > 1)), parado ? 0 : 560);
+    if (parado) assentar(); else assenta = setTimeout(assentar, 660);
     atualizarCromo();
   }
 
@@ -484,46 +506,139 @@
     else if (e.key === 'End') ir(N - 1);
   });
 
-  // arrastar para o lado. Celular: a pagina acompanha o dedo e, ao soltar, passa ou volta conforme a distancia e a velocidade.
-  // Computador: arrastar mais de 50 px vira a folha. O navegador cuida da rolagem vertical (touch-action: pan-y na mesa).
+  // ---- arrastar para o lado ----
+  // Celular: a folha gira acompanhando o dedo e, ao soltar, termina de virar ou volta, conforme a distancia e a velocidade.
+  // Computador: arrastar mais de 50 px vira a folha.
+  // O dedo e lido por eventos de toque, com preventDefault quando o gesto e de lado: assim o navegador do celular
+  // nao toma o gesto para si (no iPhone e no Android de verdade ele cancelava o arrasto). Mouse e caneta vem por
+  // pointer events. A rolagem para cima e para baixo continua sendo do navegador.
   let arr = null, ultimoArrasto = 0;
-  mesa.addEventListener('pointerdown', function (e) {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (e.target.closest('button, a')) { arr = null; return; }
-    arr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: performance.now(), dx: 0, eixo: null };
-  });
-  mesa.addEventListener('pointermove', function (e) {
-    if (!arr || e.pointerId !== arr.id || !celular) return;
-    const dx = e.clientX - arr.x0, dy = e.clientY - arr.y0;
-    if (!arr.eixo) {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      arr.eixo = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y';
-      if (arr.eixo === 'x') { livro.classList.add('arrastando'); try { mesa.setPointerCapture(e.pointerId); } catch (x) {} }
+
+  function repousar(j) {
+    const f = folhas[j], virada = j < atual;
+    f.classList.remove('girando');
+    f.style.setProperty('--ang', virada ? ANG_VIRADA + 'deg' : '0deg');
+    f.style.setProperty('--t', virada ? '1' : '0');
+    f.style.zIndex = virada ? 0 : N - j;
+    f.classList.toggle('oculta', j !== atual);
+  }
+  // d = quanto o dedo andou para o lado desde que o gesto foi reconhecido
+  function girarCom(d) {
+    const a = arr;
+    let j = -1, ang = 0;
+    if (d < 0) {
+      // para a frente: a pagina atual levanta; a borda solta acompanha o dedo
+      j = atual;
+      let p = Math.min(1, -d / a.w);
+      if (atual === N - 1) p *= 0.1; // ultima pagina: a folha so levanta um pouco
+      ang = -Math.acos(1 - p) * 180 / Math.PI;
+    } else if (d > 0 && atual > 0) {
+      // para tras: a pagina anterior volta por cima
+      j = atual - 1;
+      ang = -Math.acos(Math.min(1, d / a.w)) * 180 / Math.PI;
     }
-    if (arr.eixo !== 'x') return;
-    // na primeira e na ultima pagina o arrasto "pesa", para mostrar que acabou
-    arr.dx = ((atual === 0 && dx > 0) || (atual === N - 1 && dx < 0)) ? dx * 0.28 : dx;
-    livro.style.setProperty('--dx', arr.dx.toFixed(1) + 'px');
-  });
-  function soltar(e, cancelado) {
-    if (!arr || e.pointerId !== arr.id) return;
+    if (j !== a.alvo) {
+      if (a.alvo >= 0) repousar(a.alvo);
+      a.alvo = j;
+      if (j >= 0) {
+        folhas[j].classList.add('girando');
+        folhas[j].classList.remove('oculta');
+        folhas[j].style.zIndex = 3 * N - j;
+        if (j === atual && folhas[j + 1]) folhas[j + 1].classList.remove('oculta');
+      }
+    }
+    a.dx = d;
+    if (j < 0) return;
+    folhas[j].style.setProperty('--ang', ang.toFixed(2) + 'deg');
+    folhas[j].style.setProperty('--t', Math.min(1, -ang / 90).toFixed(3));
+  }
+
+  function inicio(x, y, alvo, id) {
+    if (alvo && alvo.closest && alvo.closest('button, a')) { arr = null; return; }
+    arr = { id: id, x0: x, y0: y, dx: 0, bruto: 0, eixo: null, alvo: -1, base: 0, w: 0, am: [] };
+  }
+  // devolve true quando o gesto e de lado (quem chama segura o gesto para o navegador nao usar)
+  function movimento(x, y) {
+    if (!arr) return false;
+    const dx = x - arr.x0, dy = y - arr.y0;
+    if (!arr.eixo) {
+      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return false;
+      arr.eixo = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (arr.eixo === 'x' && celular) {
+        assentar();
+        livro.classList.add('arrastando');
+        arr.base = dx;
+        arr.w = livro.getBoundingClientRect().width || innerWidth;
+      }
+    }
+    if (arr.eixo !== 'x') return false;
+    // guarda os ultimos 120 ms do gesto, para medir a velocidade na hora de soltar
+    const agora = performance.now();
+    arr.bruto = dx;
+    arr.am.push([agora, dx]);
+    while (arr.am.length > 2 && agora - arr.am[0][0] > 120) arr.am.shift();
+    if (celular) girarCom(dx - arr.base);
+    return true;
+  }
+  function fim(x, y, cancelado) {
     const a = arr; arr = null;
+    if (!a) return;
     if (!celular) {
-      const dx = e.clientX - a.x0, dy = e.clientY - a.y0;
+      const dx = x - a.x0, dy = y - a.y0;
       if (!cancelado && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { ultimoArrasto = performance.now(); ir(atual + (dx < 0 ? 1 : -1)); }
       return;
     }
     if (a.eixo !== 'x') return;
     ultimoArrasto = performance.now();
     livro.classList.remove('arrastando');
-    livro.style.setProperty('--dx', '0px');
-    if (cancelado) return;
-    const veloc = a.dx / Math.max(1, performance.now() - a.t0); // px por ms
-    const larg = livro.getBoundingClientRect().width || innerWidth;
-    if (Math.abs(a.dx) > larg * 0.22 || (Math.abs(veloc) > 0.4 && Math.abs(a.dx) > 24)) ir(atual + (a.dx < 0 ? 1 : -1));
+    void livro.offsetWidth; // a folha termina de virar a partir do angulo em que o dedo deixou
+    let dir = 0;
+    if (!cancelado) {
+      // velocidade do fim do gesto, em px por ms (zero se o dedo parou antes de soltar)
+      const am = a.am, n = am.length, agora = performance.now();
+      const veloc = (n >= 2 && agora - am[n - 1][0] < 120) ? (am[n - 1][1] - am[0][1]) / Math.max(1, am[n - 1][0] - am[0][0]) : 0;
+      if (Math.abs(veloc) > 0.3 && Math.abs(a.bruto) > 18) dir = veloc < 0 ? 1 : -1;      // peteleco
+      else if (Math.abs(a.bruto) > a.w * 0.22) dir = a.bruto < 0 ? 1 : -1;                // arrasto longo
+      // so vale se for a folha que o dedo esta segurando
+      if ((dir === 1 && a.alvo !== atual) || (dir === -1 && a.alvo !== atual - 1)) dir = 0;
+    }
+    ir(atual + dir);
   }
-  mesa.addEventListener('pointerup', e => soltar(e, false));
-  mesa.addEventListener('pointercancel', e => soltar(e, true));
+
+  // dedo
+  function acharToque(lista, id) { for (let i = 0; i < lista.length; i++) if (lista[i].identifier === id) return lista[i]; return null; }
+  mesa.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) { if (arr) fim(0, 0, true); return; }
+    const t = e.touches[0];
+    inicio(t.clientX, t.clientY, e.target, 't' + t.identifier);
+  }, { passive: true });
+  mesa.addEventListener('touchmove', function (e) {
+    if (!arr) return;
+    const t = acharToque(e.touches, +String(arr.id).slice(1));
+    if (!t || String(arr.id).charAt(0) !== 't') return;
+    if (movimento(t.clientX, t.clientY) && e.cancelable) e.preventDefault();
+  }, { passive: false });
+  mesa.addEventListener('touchend', function (e) {
+    if (!arr || String(arr.id).charAt(0) !== 't') return;
+    const t = acharToque(e.changedTouches, +String(arr.id).slice(1));
+    if (t) fim(t.clientX, t.clientY, false);
+  });
+  mesa.addEventListener('touchcancel', function () { if (arr && String(arr.id).charAt(0) === 't') fim(0, 0, true); });
+
+  // mouse e caneta
+  mesa.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'touch') return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    inicio(e.clientX, e.clientY, e.target, 'p' + e.pointerId);
+  });
+  mesa.addEventListener('pointermove', function (e) {
+    if (e.pointerType === 'touch' || !arr || arr.id !== 'p' + e.pointerId) return;
+    const antes = arr.eixo;
+    if (movimento(e.clientX, e.clientY) && !antes && celular) { try { mesa.setPointerCapture(e.pointerId); } catch (x) {} }
+  });
+  mesa.addEventListener('pointerup', function (e) { if (e.pointerType !== 'touch' && arr && arr.id === 'p' + e.pointerId) fim(e.clientX, e.clientY, false); });
+  mesa.addEventListener('pointercancel', function (e) { if (e.pointerType !== 'touch' && arr && arr.id === 'p' + e.pointerId) fim(e.clientX, e.clientY, true); });
+  mesa.addEventListener('dragstart', function (e) { e.preventDefault(); });
 
   // tocar ou clicar numa foto abre ela ampliada (menos logo depois de um arrasto)
   livro.addEventListener('click', function (e) {

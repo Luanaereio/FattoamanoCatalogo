@@ -2,7 +2,7 @@
 
 Catálogo folheável, estático, sem build. Abre direto na Vercel ou em qualquer servidor de arquivos.
 
-As 10 páginas são as mesmas do PDF "Catálogo Atacado 2026": Look Book (abertura), sete peças, a página dos seis modelos e o contato com WhatsApp e e-mail. No computador cada página é uma folha deitada, na proporção do PDF, que vira em 3D pela borda esquerda. No celular a mesma página se reorganiza em pé (foto do modelo, detalhes lado a lado, ficha embaixo) e rola por dentro; as páginas ficam lado a lado e deslizam acompanhando o dedo, sem 3D. Setas, teclado (setas, Page Up/Down, Home, End) e a tira de miniaturas também navegam.
+As 10 páginas são as mesmas do PDF "Catálogo Atacado 2026": Look Book (abertura), sete peças, a página dos seis modelos e o contato com WhatsApp e e-mail. No computador cada página é uma folha deitada, na proporção do PDF, que vira em 3D pela borda esquerda. No celular a mesma página se reorganiza em pé (foto do modelo, detalhes lado a lado, ficha embaixo) e rola por dentro; a folha vira como papel, girando pela borda esquerda e acompanhando o dedo. Setas, teclado (setas, Page Up/Down, Home, End) e a tira de miniaturas também navegam.
 
 Tocar ou clicar numa foto (modelo, detalhes, os seis modelos) abre ela ampliada em tela cheia; tocar de novo aproxima, e dá para passear pela foto com o dedo. O X, a tecla Esc e o botão voltar do aparelho fecham.
 
@@ -47,9 +47,9 @@ Quem preferir menos movimento (opção do sistema) vê tudo parado.
 
 ## Cuidado ao mexer no livro
 
-O verso de cada folha só fica visível enquanto ela vira, e no celular não existe (lá não há 3D nenhum). Se o verso ficar presente em repouso, o navegador do celular passa a entregar o toque a ele e a página deixa de rolar com o dedo, mesmo com tudo parecendo certo na tela. Qualquer mudança na virada precisa ser testada rolando com toque de verdade, não só no computador.
+O verso de cada folha só fica visível enquanto ela vira, e no celular não existe. No celular a folha só tem 3D enquanto vira (classe `girando`); a página parada na tela fica sem transform nenhum. Se o verso ficar presente em repouso, o navegador do celular passa a entregar o toque a ele e a página deixa de rolar com o dedo, mesmo com tudo parecendo certo na tela. Qualquer mudança na virada precisa ser testada rolando com toque de verdade, não só no computador.
 
-No celular, a rolagem para cima e para baixo é do navegador e o arrasto para o lado é do script (`touch-action: pan-y` na mesa). Nenhuma letra do celular fica abaixo de 11 px.
+No celular, a rolagem para cima e para baixo é do navegador e o arrasto para o lado é do script. Duas coisas garantem isso no aparelho de verdade: `touch-action: pan-y` na própria página que rola (`.pg`), porque a regra posta só na mesa é anulada por quem tem rolagem, e a leitura do dedo por eventos de toque com `preventDefault` quando o gesto é de lado. Nenhuma letra do celular fica abaixo de 11 px.
 
 ## Tipografia
 
