@@ -1,5 +1,5 @@
 /* Fatto a Mano: catalogo folheavel.
-   Monta as 9 paginas a partir de js/produtos.js (capa, Look Book, 6 pecas, pagina final),
+   Monta as 10 paginas a partir de js/produtos.js (Look Book, 7 pecas, os seis modelos e o contato),
    encaderna uma pagina por folha e folheia com virada em 3D pela borda esquerda.
    No computador a pagina e deitada como no PDF; no celular o script marca <html class="cel"> e o CSS reorganiza em pe. */
 (function () {
@@ -8,8 +8,9 @@
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const reduzido = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mouseFino = matchMedia('(pointer: fine)').matches;
   const LOJA = window.LOJA, ATRIBUTOS = window.ATRIBUTOS, PRODUTOS = window.PRODUTOS;
-  const CAPA = window.CAPA, LOOKBOOK = window.LOOKBOOK, FINAL = window.FINAL;
+  const LOOKBOOK = window.LOOKBOOK, SEIS = window.SEIS, FINAL = window.FINAL;
   const RAZAO = 4800 / 3150; // proporcao da pagina do PDF
 
   const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -18,9 +19,8 @@
   const zapLink = (texto) => 'https://wa.me/' + LOJA.whatsapp + '?text=' + encodeURIComponent(texto);
   const reais = (v) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   // imagem carregada so quando a pagina chega perto (data-src vira src em carregar())
-  const img = (nome, alt, larguras, sizes, classe) =>
-    '<img' + (classe ? ' class="' + classe + '"' : '') +
-    ' data-src="' + foto('grande', nome) + '"' +
+  const img = (nome, alt, larguras, sizes) =>
+    '<img data-src="' + foto('grande', nome) + '"' +
     ' data-srcset="' + foto('media', nome) + ' ' + larguras[0] + 'w, ' + foto('grande', nome) + ' ' + larguras[1] + 'w"' +
     ' data-sizes="' + sizes + '" alt="' + esc(alt) + '" decoding="async">';
 
@@ -33,57 +33,30 @@
     camisa: SVG('<path d="M9 4h6l1 2 4.5 1.6-1.4 4.2-2.1-.6V20H7V11.2l-2.1.6L3.5 7.6 8 6z"/><path d="M9 4c0 2 1.3 3.2 3 3.2S15 6 15 4"/>'),
     camadas: SVG('<path d="M12 4l9 5-9 5-9-5z"/><path d="M3 13.5l9 5 9-5"/>'),
     zap: SVG('<path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1.2-1.4-1.9-1-1 .8a4 4 0 0 1-2.2-2.2l.8-1-1-1.9L9 9.5z"/>'),
-    instagram: SVG('<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="0.9" fill="currentColor" stroke="none"/>'),
+    email: SVG('<rect x="2.5" y="5.5" width="19" height="13" rx="1.2"/><path d="M3 6.5l9 7 9-7"/>'),
   };
 
   /* ---------- paginas ---------- */
   const paginas = [];
   function pagina(o) { o.indice = paginas.length; paginas.push(o); return o; }
 
-  // capa
-  pagina({
-    classe: 'pg-capa', rotulo: 'Capa',
-    html: () =>
-      '<div class="capa-foto">' + img('capa', '', [1200, 2400], '100vw') + '</div>' +
-      '<div class="capa-texto">' +
-        '<img class="capa-simbolo" src="fotos/marca/simbolo-claro.png" alt="">' +
-        '<p class="capa-assinatura"><span>' + esc(LOJA.assinatura) + '</span></p>' +
-        '<p class="capa-frase">' + esc(CAPA.frase) + '</p>' +
-        '<h1 class="capa-titulo" aria-label="' + esc(CAPA.titulo) + '">' +
-          CAPA.titulo.split('').map((ch, k) => ch === ' ' ? '<span class="esp" aria-hidden="true"> </span>' : '<span aria-hidden="true" style="--i:' + k + '">' + esc(ch) + '</span>').join('') +
-        '</h1>' +
-        '<p class="capa-sub">' + esc(CAPA.subtitulo) + '</p>' +
-        '<p class="capa-abrir">Abrir o catálogo</p>' +
-      '</div>' +
-      '<div class="capa-luz" aria-hidden="true"></div>',
-  });
-
-  // look book
+  // 1. look book (abre o catalogo)
   pagina({
     classe: 'pg-look', rotulo: 'Look Book',
     html: () =>
-      '<div class="look-cantos">' +
-        '<p class="look-canto look-esq">' + esc(LOOKBOOK.cantoEsquerdo) + '</p>' +
-        '<p class="look-canto look-dir">' + esc(LOOKBOOK.cantoDireito).replace(/ (\d{4})$/, '<br><b>$1</b>').replace(' ', '<br>') + '</p>' +
-      '</div>' +
+      '<p class="look-canto">' + [].concat(LOOKBOOK.cantoEsquerdo).map(esc).join(' <br>') + '</p>' +
       '<img class="look-logo" src="fotos/marca/lockup-escuro.png" alt="' + esc(LOJA.nome + ', ' + LOJA.assinatura) + '">' +
       '<div class="look-fantasma" aria-hidden="true"><span>' + LOOKBOOK.titulo.join(' ') + '</span><span>' + LOOKBOOK.titulo[1] + '</span></div>' +
-      '<h2 class="look-titulo">' + LOOKBOOK.titulo.map(t => '<span>' + esc(t) + '</span>').join('') + '</h2>' +
-      '<div class="look-cena">' +
-        '<div class="look-etiqueta">' + esc(LOOKBOOK.etiqueta).replace(/ /g, '<br>') + '</div>' +
-        '<div class="look-modelo">' + img('lookbook-modelo', 'Modelo sentado com polo marrom e calça areia', [520, 656], '(max-width: 899px) 82vw, 40vw') + '</div>' +
-      '</div>' +
+      '<h1 class="look-titulo">' + LOOKBOOK.titulo.map(t => '<span>' + esc(t) + '</span>').join('') + '</h1>' +
+      '<div class="look-modelo">' + img('lookbook-modelo-2', 'Modelo sentado com polo marrom e calça areia', [800, 1400], '(max-width: 899px) 86vw, 40vw') + '</div>' +
       '<ul class="look-destaques">' +
         LOOKBOOK.destaques.map((d, k) => '<li style="--i:' + k + '"><i>' + ICONES[d.icone] + '</i><div><b>' + esc(d.titulo) + '</b><p>' + esc(d.texto) + '</p></div></li>').join('') +
       '</ul>',
   });
 
-  // pecas
+  // 2 a 8. pecas
   PRODUTOS.forEach(p => {
-    p.pagina = pagina({
-      classe: 'pg-peca', produto: p.id, rotulo: p.nome,
-      html: () => fichaHtml(p),
-    }).indice;
+    p.pagina = pagina({ classe: 'pg-peca', produto: p.id, rotulo: p.nome, html: () => fichaHtml(p) }).indice;
   });
 
   function fichaHtml(p) {
@@ -91,7 +64,8 @@
     const cols = pk.colunas.length + 2;
     let n = 0; // ordem das celulas do PACK, para o carimbo uma a uma
     const cel = (tag, conteudo, extra) => '<' + tag + ' style="--i:' + (n++) + '"' + (extra || '') + '>' + conteudo + '</' + tag + '>';
-    const dica = matchMedia('(pointer: fine)').matches ? 'Passe o mouse para ampliar' : 'Segure para ampliar';
+    const dica = mouseFino ? 'Passe o mouse para ampliar' : 'Segure para ampliar';
+    const linhas = p.linhas || [p.nome];
     return '<figure class="peca-modelo">' + img(p.id + '-modelo', p.fotos.modelo, [749, 1348], '(max-width: 899px) 100vw, 46vw') + '</figure>' +
       '<div class="peca-detalhes">' +
         '<figure data-grande="' + foto('grande', p.id + '-detalhe-1') + '">' + img(p.id + '-detalhe-1', p.fotos.detalhe1, [429, 920], '(max-width: 899px) 50vw, 19vw') + '</figure>' +
@@ -101,9 +75,10 @@
       '<div class="peca-ficha">' +
         '<p class="ficha-rotulo">Código</p>' +
         '<p class="ficha-codigo">' + esc(p.ref) + '</p>' +
-        '<h2 class="ficha-titulo">' + esc(p.nome) + '</h2>' +
+        // nome e descricao quebram nas mesmas linhas do PDF (no celular o CSS esconde as quebras e o texto corre solto)
+        '<h2 class="ficha-titulo' + (linhas.length > 3 ? ' longo' : '') + '" aria-label="' + esc(p.nome) + '"><span>' + linhas.map(esc).join(' <br>') + '</span></h2>' +
         '<span class="ficha-traco" aria-hidden="true"></span>' +
-        '<p class="ficha-descricao">' + esc(p.descricao) + '</p>' +
+        '<p class="ficha-descricao">' + esc(p.descricao).replace(', ', ', <br>').replace('. ', '. <br>') + '</p>' +
         '<ul class="ficha-atributos">' +
           ATRIBUTOS.map((a, k) => '<li style="--i:' + k + '">' + ICONES[a.icone] + '<span>' + esc(a.texto).replace(' ', '<br>') + '</span></li>').join('') +
         '</ul>' +
@@ -125,22 +100,29 @@
       '</div>';
   }
 
-  // pagina final
+  // 9. os seis modelos
   pagina({
-    classe: 'pg-final', rotulo: 'Instagram e WhatsApp',
+    classe: 'pg-seis', rotulo: 'Fatto a Mano',
+    html: () =>
+      '<div class="seis-cena">' + img(SEIS.foto, SEIS.descricao, [1400, 2400], '100vw') + '</div>' +
+      '<div class="seis-luz" aria-hidden="true"></div>',
+  });
+
+  // 10. contato
+  pagina({
+    classe: 'pg-final', rotulo: 'Contato',
     html: () =>
       '<div class="final-luz" aria-hidden="true"></div>' +
       '<img class="final-logo" src="fotos/marca/lockup-escuro.png" alt="' + esc(LOJA.nome + ', ' + LOJA.assinatura) + '">' +
       '<h2 class="final-titulo">' + esc(FINAL.titulo) + '</h2>' +
       '<p class="final-texto">' + esc(FINAL.texto) + '</p>' +
-      '<div class="final-qrs">' +
-        FINAL.qr.map((q, k) =>
-          (k ? '<span class="qr-divisor" aria-hidden="true"></span>' : '') +
-          '<a class="qr" href="' + esc(q.link()) + '" target="_blank" rel="noopener" style="--i:' + k + '">' +
-            '<span class="qr-card"><img src="' + esc(q.imagem) + '" alt="QR code do ' + esc(q.rotulo) + '" width="264" height="264" loading="lazy"></span>' +
-            '<span class="qr-rotulo">' + (ICONES[q.rotulo.toLowerCase()] || '') + esc(q.rotulo) + '</span>' +
-          '</a>'
-        ).join('') +
+      '<div class="final-contatos">' +
+        '<a class="contato" style="--i:0" href="' + esc(zapLink(LOJA.mensagemGeral)) + '" target="_blank" rel="noopener">' +
+          // o mais e o hifen da Bodoni sao fios quase invisiveis: saem na letra de texto
+          ICONES.zap + '<span class="contato-rotulo">WhatsApp</span><span class="contato-valor">' + esc(LOJA.whatsappTexto).replace(/[+-]/g, s => '<i>' + s + '</i>') + '</span></a>' +
+        '<span class="contato-divisor" aria-hidden="true"></span>' +
+        '<a class="contato" style="--i:1" href="mailto:' + esc(LOJA.email) + '">' +
+          ICONES.email + '<span class="contato-rotulo">E-mail</span><span class="contato-valor miudo">' + esc(LOJA.email) + '</span></a>' +
       '</div>' +
       '<span class="final-traco" aria-hidden="true"></span>' +
       '<p class="final-marca">' + esc(LOJA.nome) + '<sup>&reg;</sup></p>' +
@@ -245,11 +227,32 @@
     });
   }
 
-  /* ---------- efeitos que precisam de script ---------- */
-  const mouseFino = matchMedia('(pointer: fine)').matches;
+  function carregar(l) {
+    $$('img[data-src]', l).forEach(i => {
+      i.srcset = i.dataset.srcset; i.sizes = i.dataset.sizes; i.src = i.dataset.src;
+      i.removeAttribute('data-src'); i.removeAttribute('data-srcset'); i.removeAttribute('data-sizes');
+    });
+  }
 
-  // ao entrar numa pagina de peca, o preco conta de zero ate o valor (junto com a animacao do CSS)
+  function montarMiniaturas() {
+    const c = $('.miniaturas');
+    paginas.forEach(p => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mini';
+      b.dataset.pagina = p.indice;
+      b.setAttribute('aria-label', 'Ir para ' + p.rotulo);
+      b.style.backgroundImage = 'url(fotos/mini/c2-p' + n2(p.indice + 1) + '.webp)';
+      b.addEventListener('click', () => ir(p.indice));
+      c.appendChild(b);
+    });
+  }
+
+  /* ---------- efeitos que precisam de script ---------- */
+  // ao entrar numa pagina: volta ao alto e, se for peca, o preco conta de zero ate o valor
   function entrar(l) {
+    const pg = $('.pg', l);
+    if (pg) pg.scrollTop = 0;
     const preco = $('.ficha-preco b[data-valor]', l);
     if (!preco) return;
     const alvo = Number(preco.dataset.valor);
@@ -322,12 +325,12 @@
     });
   }
 
-  // paralaxe com o mouse na capa e no Look Book (--mx e --my entre -1 e 1)
+  // paralaxe com o mouse no Look Book e na pagina dos seis modelos (--mx e --my entre -1 e 1)
   function paralaxe() {
     if (!mouseFino || reduzido) return;
     let alvo = null;
     mesa.addEventListener('pointermove', e => {
-      const pg = livro.querySelector('.lado.frente.ativa .pg-capa, .lado.frente.ativa .pg-look');
+      const pg = livro.querySelector('.lado.frente.ativa .pg-look, .lado.frente.ativa .pg-seis');
       if (!pg) return;
       const r = pg.getBoundingClientRect();
       const mx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width - 0.5) * 2));
@@ -338,30 +341,8 @@
     mesa.addEventListener('pointerleave', () => { if (alvo) { alvo.style.setProperty('--mx', '0'); alvo.style.setProperty('--my', '0'); } });
   }
 
-  function carregar(l) {
-    $$('img[data-src]', l).forEach(i => {
-      i.srcset = i.dataset.srcset; i.sizes = i.dataset.sizes; i.src = i.dataset.src;
-      i.removeAttribute('data-src'); i.removeAttribute('data-srcset'); i.removeAttribute('data-sizes');
-    });
-  }
-
-  function montarMiniaturas() {
-    const c = $('.miniaturas');
-    paginas.forEach(p => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'mini';
-      b.dataset.pagina = p.indice;
-      b.setAttribute('aria-label', 'Ir para ' + p.rotulo);
-      b.style.backgroundImage = 'url(fotos/mini/p' + n2(p.indice + 1) + '.webp)';
-      b.addEventListener('click', () => ir(p.indice));
-      c.appendChild(b);
-    });
-  }
-
   /* ---------- liga o que esta dentro das paginas ---------- */
   function ligar() {
-    $$('.pg-capa', livro).forEach(c => c.addEventListener('click', () => ir(1)));
     PRODUTOS.forEach(p => {
       const pg = livro.querySelector('.pg-peca[data-produto="' + p.id + '"]');
       if (!pg) return;
