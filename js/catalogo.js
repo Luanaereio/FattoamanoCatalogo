@@ -1,14 +1,15 @@
 /* Fatto a Mano: catalogo folheavel.
-   Monta as 10 paginas a partir de js/produtos.js (Look Book, 7 pecas, os seis modelos e o contato),
-   encaderna uma pagina por folha e folheia com virada em 3D pela borda esquerda.
-   No computador a pagina e deitada como no PDF; no celular o script marca <html class="cel"> e o CSS reorganiza em pe. */
+   Monta as 10 paginas a partir de js/produtos.js (Look Book, 7 pecas, os seis modelos e o contato) e uma pagina por folha.
+   Computador: pagina deitada como no PDF, vira em 3D pela borda esquerda.
+   Celular (o script marca <html class="cel">): pagina em pe que rola por dentro; as paginas ficam lado a lado e
+   deslizam acompanhando o dedo, sem 3D. Tocar ou clicar numa foto abre ela ampliada (visor). */
 (function () {
   'use strict';
 
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const reduzido = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const mouseFino = matchMedia('(pointer: fine)').matches;
+  const temMouse = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const LOJA = window.LOJA, ATRIBUTOS = window.ATRIBUTOS, PRODUTOS = window.PRODUTOS;
   const LOOKBOOK = window.LOOKBOOK, SEIS = window.SEIS, FINAL = window.FINAL;
   const RAZAO = 4800 / 3150; // proporcao da pagina do PDF
@@ -22,7 +23,10 @@
   const img = (nome, alt, larguras, sizes) =>
     '<img data-src="' + foto('grande', nome) + '"' +
     ' data-srcset="' + foto('media', nome) + ' ' + larguras[0] + 'w, ' + foto('grande', nome) + ' ' + larguras[1] + 'w"' +
-    ' data-sizes="' + sizes + '" alt="' + esc(alt) + '" decoding="async">';
+    ' data-sizes="' + sizes + '" alt="' + esc(alt) + '" decoding="async" draggable="false">';
+  // atributos de uma foto que abre ampliada: data-zoom = arquivo maior; data-previa = o que ja esta carregado, mostrado enquanto o maior chega
+  const zoom = (grande, previa, alt) => ' data-zoom="' + grande + '"' + (previa ? ' data-previa="' + previa + '"' : '') + ' data-alt="' + esc(alt) + '"';
+  const DICA = temMouse ? 'Passe o mouse para ampliar' : 'Toque para ampliar';
 
   const SVG = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
   const ICONES = {
@@ -34,6 +38,7 @@
     camadas: SVG('<path d="M12 4l9 5-9 5-9-5z"/><path d="M3 13.5l9 5 9-5"/>'),
     zap: SVG('<path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1.2-1.4-1.9-1-1 .8a4 4 0 0 1-2.2-2.2l.8-1-1-1.9L9 9.5z"/>'),
     email: SVG('<rect x="2.5" y="5.5" width="19" height="13" rx="1.2"/><path d="M3 6.5l9 7 9-7"/>'),
+    fechar: SVG('<path d="M6 6l12 12M18 6L6 18"/>'),
   };
 
   /* ---------- paginas ---------- */
@@ -64,13 +69,14 @@
     const cols = pk.colunas.length + 2;
     let n = 0; // ordem das celulas do PACK, para o carimbo uma a uma
     const cel = (tag, conteudo, extra) => '<' + tag + ' style="--i:' + (n++) + '"' + (extra || '') + '>' + conteudo + '</' + tag + '>';
-    const dica = mouseFino ? 'Passe o mouse para ampliar' : 'Segure para ampliar';
     const linhas = p.linhas || [p.nome];
-    return '<figure class="peca-modelo">' + img(p.id + '-modelo', p.fotos.modelo, [749, 1348], '(max-width: 899px) 100vw, 46vw') + '</figure>' +
+    const d1 = foto('grande', p.id + '-detalhe-1'), d2 = foto('grande', p.id + '-detalhe-2');
+    return '<figure class="peca-modelo"' + zoom('fotos/zoom/' + p.id + '-modelo.webp', foto('grande', p.id + '-modelo'), p.fotos.modelo) + '>' +
+        img(p.id + '-modelo', p.fotos.modelo, [749, 1348], '(max-width: 899px) 100vw, 46vw') + '</figure>' +
       '<div class="peca-detalhes">' +
-        '<figure data-grande="' + foto('grande', p.id + '-detalhe-1') + '">' + img(p.id + '-detalhe-1', p.fotos.detalhe1, [429, 920], '(max-width: 899px) 50vw, 19vw') + '</figure>' +
-        '<figure data-grande="' + foto('grande', p.id + '-detalhe-2') + '">' + img(p.id + '-detalhe-2', p.fotos.detalhe2, [429, 920], '(max-width: 899px) 50vw, 19vw') +
-          '<span class="peca-dica" aria-hidden="true">' + dica + '</span></figure>' +
+        '<figure' + zoom(d1, '', p.fotos.detalhe1) + '>' + img(p.id + '-detalhe-1', p.fotos.detalhe1, [429, 920], '(max-width: 899px) 50vw, 19vw') + '</figure>' +
+        '<figure' + zoom(d2, '', p.fotos.detalhe2) + '>' + img(p.id + '-detalhe-2', p.fotos.detalhe2, [429, 920], '(max-width: 899px) 50vw, 19vw') +
+          '<span class="peca-dica" aria-hidden="true">' + DICA + '</span></figure>' +
       '</div>' +
       '<div class="peca-ficha">' +
         '<p class="ficha-rotulo">Código</p>' +
@@ -104,7 +110,10 @@
   pagina({
     classe: 'pg-seis', rotulo: 'Fatto a Mano',
     html: () =>
-      '<div class="seis-cena">' + img(SEIS.foto, SEIS.descricao, [1400, 2400], '100vw') + '</div>' +
+      '<div class="seis-cena"' + zoom('fotos/zoom/' + SEIS.foto + '.webp', foto('grande', SEIS.foto), SEIS.descricao) + '>' +
+        img(SEIS.foto, SEIS.descricao, [1400, 2400], '100vw') +
+        '<span class="peca-dica" aria-hidden="true">Toque para ampliar</span>' +
+      '</div>' +
       '<div class="seis-luz" aria-hidden="true"></div>',
   });
 
@@ -159,12 +168,17 @@
     const cel = dimensionar();
     if (cel === celular && folhas.length) { ir(atual, true); return; }
     celular = cel;
+    livro.classList.remove('arrastando');
+    livro.style.removeProperty('--dx');
     livro.innerHTML = '<div class="livro-sombra" aria-hidden="true"></div>';
     folhas = paginas.map(pg => {
       const f = document.createElement('div');
       f.className = 'folha';
       f.innerHTML =
-        '<div class="lado frente" data-pagina="' + pg.indice + '"><div class="pg ' + pg.classe + '"' + (pg.produto ? ' data-produto="' + pg.produto + '"' : '') + '>' + pg.html() + '</div></div>' +
+        '<div class="lado frente" data-pagina="' + pg.indice + '"><div class="pg ' + pg.classe + '"' + (pg.produto ? ' data-produto="' + pg.produto + '"' : '') + '>' + pg.html() + '</div>' +
+          // no celular, aviso fixo de que a pagina da peca continua para baixo (fica fora da area que rola)
+          (pg.produto ? '<span class="pista-rolar" aria-hidden="true">Preço e cores</span>' : '') +
+        '</div>' +
         '<div class="lado verso" aria-hidden="true"></div>';
       livro.appendChild(f);
       return f;
@@ -175,6 +189,7 @@
 
   function ir(s, imediato) {
     s = Math.max(0, Math.min(N - 1, s));
+    if (celular) return irCelular(s, imediato);
     const anterior = atual;
     atual = s;
     const parado = imediato || reduzido;
@@ -207,6 +222,27 @@
     f.classList.toggle('oculta', virada);
     f.style.transitionDelay = '';
     f.style.zIndex = virada ? (j + 1) : (2 * N - j);
+  }
+
+  // celular: sem 3D. Cada folha recebe --pos (-1 a esquerda, 0 na tela, 1 a direita) e o CSS desliza.
+  // So a pagina atual e as vizinhas ficam visiveis; a que esta saindo continua visivel ate o deslize acabar.
+  let limpaOcultas = null;
+  function irCelular(s, imediato) {
+    const anterior = atual;
+    atual = s;
+    const parado = imediato || reduzido;
+    folhas.forEach((f, j) => {
+      f.classList.remove('virada', 'virando');
+      f.style.zIndex = '';
+      f.style.transitionDelay = '';
+      if (Math.abs(j - s) <= 1 || j === anterior) f.classList.remove('oculta');
+      if (parado) f.style.transition = 'none';
+      f.style.setProperty('--pos', j < s ? -1 : j > s ? 1 : 0);
+      if (parado) { void f.offsetWidth; f.style.transition = ''; }
+    });
+    clearTimeout(limpaOcultas);
+    limpaOcultas = setTimeout(() => folhas.forEach((f, j) => f.classList.toggle('oculta', Math.abs(j - atual) > 1)), parado ? 0 : 560);
+    atualizarCromo();
   }
 
   function atualizarCromo() {
@@ -249,16 +285,31 @@
   }
 
   /* ---------- efeitos que precisam de script ---------- */
-  // ao entrar numa pagina: volta ao alto e, se for peca, o preco conta de zero ate o valor
+  // ao entrar numa pagina: volta ao alto; a ficha da peca so se anima quando esta a vista
   function entrar(l) {
     const pg = $('.pg', l);
     if (pg) pg.scrollTop = 0;
+    l.classList.remove('rolou');
+    const ficha = $('.peca-ficha', l);
+    if (ficha) { ficha.classList.remove('vista'); verFicha(l); }
+  }
+  // marca a ficha como vista quando ela entra na tela (no computador, de imediato; no celular, quando a pessoa rola ate ela)
+  function verFicha(l) {
+    const ficha = $('.peca-ficha', l), pg = $('.pg', l);
+    if (!ficha || ficha.classList.contains('vista') || !l.classList.contains('ativa')) return;
+    const r = ficha.getBoundingClientRect(), p = pg.getBoundingClientRect();
+    if (r.top > p.bottom - Math.min(90, p.height * 0.15)) return;
+    ficha.classList.add('vista');
+    contarPreco(l);
+  }
+  // o preco conta de zero ate o valor, junto com a entrada dele no CSS
+  function contarPreco(l) {
     const preco = $('.ficha-preco b[data-valor]', l);
     if (!preco) return;
     const alvo = Number(preco.dataset.valor);
     if (reduzido) { preco.textContent = reais(alvo); return; }
     preco.textContent = reais(0);
-    const inicio = performance.now() + 1900, dur = 1300;
+    const inicio = performance.now() + (celular ? 1200 : 1900), dur = 1300;
     (function passo(t) {
       if (!l.classList.contains('ativa')) { preco.textContent = reais(alvo); return; }
       if (t < inicio) { requestAnimationFrame(passo); return; }
@@ -269,7 +320,7 @@
     })(performance.now());
   }
 
-  // lupa (amplia o tecido) e inclinacao 3D nas fotos de detalhe
+  // lupa (amplia o tecido) e inclinacao 3D nas fotos de detalhe: so com mouse. No toque, tocar abre a foto ampliada.
   function detalhes(pg) {
     $$('.peca-detalhes figure', pg).forEach(fig => {
       const im = $('img', fig);
@@ -279,12 +330,12 @@
       lente.setAttribute('aria-hidden', 'true');
       pg.appendChild(lente);
       const ZOOM = 2.3;
-      let aberta = false, segurando = null;
+      let aberta = false;
       function mover(e) {
         const r = fig.getBoundingClientRect(), pr = pg.getBoundingClientRect();
         const x = e.clientX - r.left, y = e.clientY - r.top;
         if (x < 0 || y < 0 || x > r.width || y > r.height) { fechar(); return; }
-        if (!aberta) { aberta = true; lente.style.backgroundImage = 'url(' + fig.dataset.grande + ')'; lente.classList.add('aberta'); if (dica) dica.classList.add('some'); }
+        if (!aberta) { aberta = true; lente.style.backgroundImage = 'url(' + fig.dataset.zoom + ')'; lente.classList.add('aberta'); if (dica) dica.classList.add('some'); }
         const d = lente.offsetWidth;
         lente.style.left = (e.clientX - pr.left - d / 2) + 'px';
         lente.style.top = (e.clientY - pr.top + pg.scrollTop - d / 2) + 'px';
@@ -294,7 +345,7 @@
         if (nat > fr) { ih = r.height; iw = ih * nat; ox = (r.width - iw) / 2; oy = 0; } else { iw = r.width; ih = iw / nat; ox = 0; oy = (r.height - ih) / 2; }
         lente.style.backgroundSize = (iw * ZOOM) + 'px ' + (ih * ZOOM) + 'px';
         lente.style.backgroundPosition = (-((x - ox) * ZOOM - d / 2)) + 'px ' + (-((y - oy) * ZOOM - d / 2)) + 'px';
-        if (mouseFino && !reduzido) {
+        if (!reduzido) {
           const px = x / r.width - 0.5, py = y / r.height - 0.5;
           fig.style.setProperty('--ry', (px * 9).toFixed(2) + 'deg');
           fig.style.setProperty('--rx', (-py * 9).toFixed(2) + 'deg');
@@ -309,27 +360,17 @@
         fig.classList.remove('inclina');
         fig.style.removeProperty('--rx'); fig.style.removeProperty('--ry');
       }
-      if (mouseFino) {
-        fig.addEventListener('pointermove', mover);
-        fig.addEventListener('pointerleave', fechar);
-      } else {
-        // no toque: segurar o dedo abre a lupa; soltar fecha
-        fig.addEventListener('pointerdown', e => {
-          clearTimeout(segurando);
-          segurando = setTimeout(() => { try { fig.setPointerCapture(e.pointerId); } catch (x) {} mover(e); }, 220);
-        });
-        fig.addEventListener('pointermove', e => { if (aberta) { e.preventDefault(); mover(e); } });
-        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => fig.addEventListener(ev, () => { clearTimeout(segurando); fechar(); }));
-        fig.addEventListener('contextmenu', e => e.preventDefault());
-      }
+      fig.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && !celular) mover(e); });
+      fig.addEventListener('pointerleave', fechar);
     });
   }
 
   // paralaxe com o mouse no Look Book e na pagina dos seis modelos (--mx e --my entre -1 e 1)
   function paralaxe() {
-    if (!mouseFino || reduzido) return;
+    if (!temMouse || reduzido) return;
     let alvo = null;
     mesa.addEventListener('pointermove', e => {
+      if (celular || e.pointerType !== 'mouse') return;
       const pg = livro.querySelector('.lado.frente.ativa .pg-look, .lado.frente.ativa .pg-seis');
       if (!pg) return;
       const r = pg.getBoundingClientRect();
@@ -341,11 +382,80 @@
     mesa.addEventListener('pointerleave', () => { if (alvo) { alvo.style.setProperty('--mx', '0'); alvo.style.setProperty('--my', '0'); } });
   }
 
+  /* ---------- foto ampliada (visor) ---------- */
+  const visor = document.createElement('div');
+  visor.className = 'visor';
+  visor.hidden = true;
+  visor.setAttribute('role', 'dialog');
+  visor.setAttribute('aria-modal', 'true');
+  visor.setAttribute('aria-label', 'Foto ampliada');
+  visor.innerHTML = '<div class="visor-rolo"><img alt="" draggable="false"></div>' +
+    '<button class="visor-fechar" type="button" aria-label="Fechar a foto ampliada">' + ICONES.fechar + '</button>' +
+    '<p class="visor-dica" aria-hidden="true"></p>';
+  document.body.appendChild(visor);
+  const vRolo = $('.visor-rolo', visor), vImg = $('img', visor), vFechar = $('.visor-fechar', visor), vDica = $('.visor-dica', visor);
+  let vVolta = null, vTimer = null, vVez = 0;
+
+  function abrirVisor(alvo) {
+    clearTimeout(vTimer);
+    const vez = ++vVez;
+    const grande = alvo.dataset.zoom, previa = alvo.dataset.previa;
+    vVolta = document.activeElement;
+    visor.classList.remove('zoom');
+    vImg.style.removeProperty('--zw');
+    vImg.alt = alvo.dataset.alt || '';
+    vDica.textContent = temMouse ? 'Clique na foto para aproximar' : 'Toque na foto para aproximar';
+    if (previa) {
+      // mostra ja o que esta carregado e troca pela foto maior quando ela chegar
+      vImg.src = previa;
+      const maior = new Image();
+      maior.onload = () => { if (vez === vVez && !visor.hidden) vImg.src = grande; };
+      maior.src = grande;
+    } else vImg.src = grande;
+    visor.hidden = false;
+    void visor.offsetWidth;
+    visor.classList.add('aberto');
+    try { history.pushState({ visor: 1 }, ''); } catch (e) {}
+    vFechar.focus({ preventScroll: true });
+  }
+  function fecharVisor(peloVoltar) {
+    if (visor.hidden || !visor.classList.contains('aberto')) return;
+    vVez++;
+    visor.classList.remove('aberto');
+    vTimer = setTimeout(() => { visor.hidden = true; visor.classList.remove('zoom'); vImg.removeAttribute('src'); }, reduzido ? 0 : 260);
+    if (!peloVoltar) { try { if (history.state && history.state.visor) history.back(); } catch (e) {} }
+    if (vVolta && vVolta.focus) { try { vVolta.focus({ preventScroll: true }); } catch (e) {} }
+  }
+  // tocar na foto aproxima no ponto tocado; tocar de novo volta a foto inteira
+  function alternarZoom(e) {
+    if (!visor.classList.contains('zoom')) {
+      const r = vImg.getBoundingClientRect(), c = vRolo.getBoundingClientRect();
+      if (!r.width) return;
+      const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+      // aproxima ate onde a foto ainda fica nitida nesta tela, entre 1,6 e 2,6 vezes
+      const nitido = (vImg.naturalWidth || r.width * 2) / (r.width * Math.min(devicePixelRatio || 1, 3) * 0.62);
+      const Z = Math.max(1.6, Math.min(2.6, nitido));
+      vImg.style.setProperty('--zw', Math.round(r.width * Z) + 'px');
+      visor.classList.add('zoom');
+      const n = vImg.getBoundingClientRect();
+      vRolo.scrollLeft = fx * n.width - (e.clientX - c.left);
+      vRolo.scrollTop = fy * n.height - (e.clientY - c.top);
+    } else {
+      visor.classList.remove('zoom');
+      vRolo.scrollLeft = 0; vRolo.scrollTop = 0;
+    }
+  }
+  vImg.addEventListener('click', e => { e.stopPropagation(); alternarZoom(e); });
+  vRolo.addEventListener('click', e => { if (e.target === vRolo && !visor.classList.contains('zoom')) fecharVisor(); });
+  vFechar.addEventListener('click', () => fecharVisor());
+  addEventListener('popstate', () => fecharVisor(true));
+
   /* ---------- liga o que esta dentro das paginas ---------- */
   function ligar() {
     PRODUTOS.forEach(p => {
       const pg = livro.querySelector('.pg-peca[data-produto="' + p.id + '"]');
       if (!pg) return;
+      const lado = pg.closest('.lado');
       const zap = $('.ficha-zap', pg);
       const botoes = $$('.cor', pg);
       function escolher(id) {
@@ -358,6 +468,7 @@
       botoes.forEach(b => b.addEventListener('click', () => escolher(b.dataset.cor)));
       escolher(p.cores[0].id);
       detalhes(pg);
+      pg.addEventListener('scroll', () => { lado.classList.toggle('rolou', pg.scrollTop > 24); verFicha(lado); }, { passive: true });
     });
   }
 
@@ -365,23 +476,62 @@
   $('.seta-prox').addEventListener('click', () => ir(atual + 1));
   $('.seta-ant').addEventListener('click', () => ir(atual - 1));
   document.addEventListener('keydown', function (e) {
+    if (!visor.hidden) { if (e.key === 'Escape') fecharVisor(); return; }
     if (e.target.closest && e.target.closest('input, textarea')) return;
     if (e.key === 'ArrowRight' || e.key === 'PageDown') ir(atual + 1);
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp') ir(atual - 1);
     else if (e.key === 'Home') ir(0);
     else if (e.key === 'End') ir(N - 1);
   });
-  let x0 = null, y0 = 0;
+
+  // arrastar para o lado. Celular: a pagina acompanha o dedo e, ao soltar, passa ou volta conforme a distancia e a velocidade.
+  // Computador: arrastar mais de 50 px vira a folha. O navegador cuida da rolagem vertical (touch-action: pan-y na mesa).
+  let arr = null, ultimoArrasto = 0;
   mesa.addEventListener('pointerdown', function (e) {
-    if (e.target.closest('button, a')) { x0 = null; return; }
-    x0 = e.clientX; y0 = e.clientY;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.target.closest('button, a')) { arr = null; return; }
+    arr = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: performance.now(), dx: 0, eixo: null };
   });
-  mesa.addEventListener('pointerup', function (e) {
-    if (x0 === null) return;
-    const dx = e.clientX - x0, dy = e.clientY - y0;
-    x0 = null;
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) ir(atual + (dx < 0 ? 1 : -1));
+  mesa.addEventListener('pointermove', function (e) {
+    if (!arr || e.pointerId !== arr.id || !celular) return;
+    const dx = e.clientX - arr.x0, dy = e.clientY - arr.y0;
+    if (!arr.eixo) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      arr.eixo = Math.abs(dx) > Math.abs(dy) * 1.15 ? 'x' : 'y';
+      if (arr.eixo === 'x') { livro.classList.add('arrastando'); try { mesa.setPointerCapture(e.pointerId); } catch (x) {} }
+    }
+    if (arr.eixo !== 'x') return;
+    // na primeira e na ultima pagina o arrasto "pesa", para mostrar que acabou
+    arr.dx = ((atual === 0 && dx > 0) || (atual === N - 1 && dx < 0)) ? dx * 0.28 : dx;
+    livro.style.setProperty('--dx', arr.dx.toFixed(1) + 'px');
   });
+  function soltar(e, cancelado) {
+    if (!arr || e.pointerId !== arr.id) return;
+    const a = arr; arr = null;
+    if (!celular) {
+      const dx = e.clientX - a.x0, dy = e.clientY - a.y0;
+      if (!cancelado && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) { ultimoArrasto = performance.now(); ir(atual + (dx < 0 ? 1 : -1)); }
+      return;
+    }
+    if (a.eixo !== 'x') return;
+    ultimoArrasto = performance.now();
+    livro.classList.remove('arrastando');
+    livro.style.setProperty('--dx', '0px');
+    if (cancelado) return;
+    const veloc = a.dx / Math.max(1, performance.now() - a.t0); // px por ms
+    const larg = livro.getBoundingClientRect().width || innerWidth;
+    if (Math.abs(a.dx) > larg * 0.22 || (Math.abs(veloc) > 0.4 && Math.abs(a.dx) > 24)) ir(atual + (a.dx < 0 ? 1 : -1));
+  }
+  mesa.addEventListener('pointerup', e => soltar(e, false));
+  mesa.addEventListener('pointercancel', e => soltar(e, true));
+
+  // tocar ou clicar numa foto abre ela ampliada (menos logo depois de um arrasto)
+  livro.addEventListener('click', function (e) {
+    const alvo = e.target.closest('[data-zoom]');
+    if (!alvo || performance.now() - ultimoArrasto < 400) return;
+    abrirVisor(alvo);
+  });
+
   let tempoResize = null;
   addEventListener('resize', function () { clearTimeout(tempoResize); tempoResize = setTimeout(construir, 160); });
 

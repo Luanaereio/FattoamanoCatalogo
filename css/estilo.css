@@ -352,10 +352,21 @@ h1, h2, h3, p { margin: 0; }
 .final-faixa { position: absolute; left: 0; right: 0; bottom: 0; height: 4.5%; background: var(--verde); }
 
 /* ---------- celular: pagina em pe, conteudo reorganizado, rola por dentro ---------- */
-html.cel .topo { padding: 0 16px; }
-html.cel .mesa { background: var(--mesa); perspective: 2000px; }
+html.cel .topo { padding: 0 16px; font-size: 11px; letter-spacing: 0.18em; }
+/* no celular nao ha 3D: as paginas ficam lado a lado e deslizam acompanhando o dedo.
+   --pos (-1, 0 ou 1) vem do script em cada folha; --dx e o quanto o dedo arrastou, posto no .livro. */
+html.cel .mesa { background: var(--mesa); perspective: none; }
+html.cel .livro { transform-style: flat; }
 html.cel .livro-sombra { display: none; }
+html.cel .folha {
+  transform-style: flat;
+  transform: translate3d(calc(var(--pos, 1) * (100% + 14px) + var(--dx, 0px)), 0, 0);
+  transition: transform 0.42s cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+html.cel .livro.arrastando .folha { transition: none; }
+html.cel .lado { backface-visibility: visible; -webkit-backface-visibility: visible; }
 html.cel .lado.verso { display: none; }
+html.cel .folha.virando .frente::after { display: none; }
 html.cel .mini { width: 42px; height: 28px; }
 html.cel .pg { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 html.cel .pg::-webkit-scrollbar { display: none; }
@@ -388,14 +399,24 @@ html.cel .ficha-titulo, html.cel .ficha-titulo.longo { min-height: 0; margin-top
 html.cel .ficha-titulo span { transform: none; }
 html.cel .ficha-traco, html.cel .ficha-titulo.longo + .ficha-traco { margin-top: calc(var(--u) * 1.6); }
 html.cel .ficha-descricao, html.cel .ficha-titulo.longo ~ .ficha-descricao { margin: calc(var(--u) * 1.6) 0 0; font-size: max(calc(var(--u) * 1.45), 15px); line-height: 1.5; white-space: normal; }
-html.cel .ficha-atributos li { font-size: max(calc(var(--u) * 1), 10.5px); }
+html.cel .ficha-atributos li { font-size: max(calc(var(--u) * 1), 11px); letter-spacing: 0.02em; }
 html.cel .ficha-cores { flex-wrap: wrap; row-gap: calc(var(--u) * 0.8); margin-left: 0; margin-right: 0; }
 html.cel .cor, html.cel .ficha-cores.muitas .cor { font-size: max(calc(var(--u) * 0.95), 11px); min-width: calc(var(--u) * 4.4); }
 html.cel .ficha-cores.muitas { gap: calc(var(--u) * 0.6); }
 html.cel .ficha-atacado { font-size: max(calc(var(--u) * 1.05), 11px); }
 html.cel .ficha-porpeca { font-size: max(calc(var(--u) * 1.05), 11px); }
-html.cel .ficha-pack { margin-top: calc(var(--u) * 2.6); font-size: max(calc(var(--u) * 0.9), 10.5px); }
-html.cel .ficha-zap { margin-top: calc(var(--u) * 1.6); font-size: max(calc(var(--u) * 1), 11px); }
+html.cel .ficha-pack { margin-top: calc(var(--u) * 2.6); font-size: max(calc(var(--u) * 0.9), 11px); }
+/* no celular o pedido pelo WhatsApp e um botao de verdade, da largura da ficha */
+html.cel .ficha-zap {
+  align-self: stretch; justify-content: center;
+  min-height: 52px; margin-top: calc(var(--u) * 2); padding: 10px 16px;
+  border: 0; border-radius: 6px;
+  background: var(--marrom); color: #fff;
+  font-size: 12px; letter-spacing: 0.12em; line-height: 1.3; text-align: center;
+}
+html.cel .ficha-zap:hover { color: #fff; }
+html.cel .ficha-zap:active { background: #74512e; }
+html.cel .ficha-zap svg { flex: none; width: 20px; height: 20px; }
 
 /* seis modelos: a foto inteira, na largura da tela, sobre um fundo desfocado da propria foto */
 html.cel .pg-seis { display: grid; place-items: center; overflow: hidden; overflow: clip; background: #a88a70 url(../fotos/grande/seis-modelos-fundo.webp) center / cover no-repeat; }
@@ -476,6 +497,27 @@ html.cel .final-marca { margin-bottom: auto; }
 /* o cabecalho PACK ocupa a largura toda: se crescesse no carimbo, passaria da tela do celular */
 .ativa .ficha-pack thead tr:first-child th { animation-name: surgir; }
 .ativa .ficha-zap { animation: surgir 0.8s ease-out 2.7s backwards; }
+/* a ficha so se anima quando esta a vista (classe .vista, posta pelo script): no celular ela fica abaixo da dobra
+   e, sem isso, o preco contava e o PACK carimbava sem ninguem ver */
+.ativa .peca-ficha:not(.vista) * { animation: none !important; }
+.ativa .peca-ficha:not(.vista) > * { opacity: 0; }
+/* no celular a sequencia da ficha e mais curta: quem rolou ate ela nao espera */
+html.cel .ativa .peca-ficha > .ficha-rotulo:first-child { animation-delay: 0.05s; }
+html.cel .ativa .ficha-codigo { animation-delay: 0.1s; }
+html.cel .ativa .ficha-titulo { animation-delay: 0.18s; }
+html.cel .ativa .ficha-traco { animation-delay: 0.4s; }
+html.cel .ativa .ficha-descricao { animation-delay: 0.36s; }
+html.cel .ativa .ficha-atributos li { animation-delay: calc(0.5s + var(--i, 0) * 0.1s); }
+html.cel .ativa .ficha-atributos svg path, html.cel .ativa .ficha-atributos svg rect { animation-delay: calc(0.6s + var(--i, 0) * 0.1s); }
+html.cel .ativa .ficha-cores-rotulo { animation-delay: 0.75s; }
+html.cel .ativa .cor { animation-delay: calc(0.9s + var(--i, 0) * 0.06s); }
+html.cel .ativa .cor i { animation-delay: calc(0.85s + var(--i, 0) * 0.06s); }
+html.cel .ativa .ficha-atacado { animation-delay: 1.1s; }
+html.cel .ativa .ficha-preco { animation-delay: 1.2s; }
+html.cel .ativa .ficha-porpeca { animation-delay: 1.45s; }
+html.cel .ativa .ficha-pack { animation-delay: 1.3s; }
+html.cel .ativa .ficha-pack th, html.cel .ativa .ficha-pack td { animation-delay: calc(1.3s + var(--i, 0) * 0.03s); }
+html.cel .ativa .ficha-zap { animation-delay: 1.8s; }
 
 /* fotos de detalhe: inclinam em 3D com o mouse, com brilho; lupa amplia o tecido.
    A inclinacao vai na foto, nao na figura: figura transformada em 3D deixava de receber o mouse no Chrome. */
@@ -487,7 +529,7 @@ html.cel .final-marca { margin-bottom: auto; }
   opacity: 0; transition: opacity 0.4s;
 }
 .peca-detalhes figure.inclina::after { opacity: 1; }
-.peca-detalhes figure { cursor: zoom-in; }
+[data-zoom] { cursor: zoom-in; }
 .peca-detalhes img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .lupa {
   position: absolute; z-index: 20; pointer-events: none;
@@ -499,7 +541,7 @@ html.cel .final-marca { margin-bottom: auto; }
   transition: opacity 0.25s, transform 0.25s;
 }
 .lupa.aberta { opacity: 1; transform: none; }
-html.cel .lupa { width: 132px; height: 132px; }
+html.cel .lupa { display: none; } /* no toque, tocar na foto abre ela ampliada (visor) */
 .peca-dica {
   position: absolute; left: calc(var(--u) * 0.8); bottom: calc(var(--u) * 0.8); z-index: 3;
   padding: calc(var(--u) * 0.45) calc(var(--u) * 0.9);
@@ -509,7 +551,9 @@ html.cel .lupa { width: 132px; height: 132px; }
   transition: opacity 0.5s;
 }
 .peca-dica.some { opacity: 0; }
-html.cel .peca-dica { left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 6px 10px; font-size: clamp(10px, 2.9vw, 11px); letter-spacing: 0.05em; overflow: hidden; text-overflow: ellipsis; }
+html.cel .peca-dica { left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 6px 9px; font-size: 11px; letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; }
+.seis-cena .peca-dica { display: none; }
+html.cel .seis-cena .peca-dica { display: block; left: auto; right: calc(5% + 8px); }
 
 /* seis modelos: a foto chega de leve e uma luz passa pelo titulo; no computador acompanha o mouse */
 .seis-cena { transform: translate(calc(var(--mx) * -0.8%), calc(var(--my) * -0.5%)) scale(1.03); transition: transform 0.6s ease-out; }
@@ -527,6 +571,66 @@ html.cel .seis-cena { transform: none; }
 .ativa .final-traco { animation: costurarFinal 0.7s ease-out 1.7s backwards; }
 .ativa .final-marca { animation: surgir 0.8s ease-out 2s backwards; }
 .final-luz { animation: luzFinal 14s ease-in-out infinite alternate; }
+
+/* ---------- celular: aviso de que a pagina da peca continua para baixo ---------- */
+@keyframes quicar { 0%, 100% { translate: 0 0; } 50% { translate: 0 4px; } }
+.pista-rolar { display: none; }
+html.cel .pista-rolar {
+  display: flex; align-items: center; gap: 9px;
+  position: absolute; left: 50%; bottom: 14px; z-index: 6; transform: translateX(-50%);
+  padding: 9px 15px 9px 16px; border-radius: 999px;
+  background: rgba(20, 20, 20, 0.66); color: #fff;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; line-height: 1; white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+html.cel .pista-rolar::after {
+  content: ''; width: 7px; height: 7px; margin-top: -3px;
+  border-right: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
+  transform: rotate(45deg);
+  animation: quicar 1.6s ease-in-out infinite;
+}
+html.cel .ativa .pista-rolar { animation: surgir 0.6s ease-out 1.5s backwards; }
+html.cel .lado.rolou .pista-rolar { opacity: 0; }
+
+/* ---------- foto ampliada (visor): tocar ou clicar numa foto abre ela em tela cheia; tocar de novo aproxima ---------- */
+.visor {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(14, 14, 16, 0.97);
+  opacity: 0; transition: opacity 0.25s;
+}
+.visor[hidden] { display: none; }
+.visor.aberto { opacity: 1; }
+.visor-rolo {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.visor-rolo::-webkit-scrollbar { display: none; }
+.visor-rolo img {
+  display: block; width: auto; height: auto; max-width: 100%; max-height: 100%;
+  cursor: zoom-in;
+  -webkit-user-select: none; user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none;
+}
+.visor.zoom .visor-rolo { place-items: start; }
+.visor.zoom .visor-rolo img { width: var(--zw); max-width: none; max-height: none; cursor: zoom-out; }
+.visor-fechar {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  width: 48px; height: 48px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(0, 0, 0, 0.6); color: #fff; border: 1px solid rgba(255, 255, 255, 0.32);
+}
+.visor-fechar svg { width: 20px; height: 20px; stroke-width: 1.8; }
+.visor-fechar:focus-visible { outline-color: #fff; }
+.visor-dica {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  padding: 9px 15px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6); color: #fff;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; white-space: nowrap;
+  pointer-events: none; transition: opacity 0.3s;
+}
+.visor.zoom .visor-dica { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
